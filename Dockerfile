@@ -29,6 +29,6 @@ COPY --from=requirements /src/requirements.txt .
 # now we're *just* deploying the needed packages for whatever was in the poetry setup
 RUN python -m pip install -U pip
 RUN pip install -r requirements.txt
-RUN mkdir /output
+RUN mkdir /app/output
 
 ENTRYPOINT ["/usr/local/bin/python","/app/repo_diff.py"]

@@ -83,13 +83,13 @@ Options:
     ```
 
 2) Run the container with the `docker run` command, ensuring to:
-    - Pass a local volume (`-v "${PWD}/output":/output`) for the csv output to be saved to
+    - Pass a local volume (`-v "${PWD}/output":/app/output`) for the csv output to be saved to
     - Pass the SNYK_TOKEN and GITHUB_TOKEN environment variables (`-e SNYK_TOKEN -e GITHUB_TOKEN`)
     - Delete the container image after use (`--rm`)
     - Specify the `--snyk-group`, `--github-org`, and `--out-file` options for the script
     ```shell
     ❯ docker run --rm -v "${PWD}/output":/output -e SNYK_TOKEN -e GITHUB_TOKEN -it repo-diff \
-    --out-file /output/output.csv \
+    --out-file output/repos-with-no-projects.csv \
     --snyk-group 36863d40-ba29-491f-af63-7a1a7d79e411 \
     --github-org snyk-playground
 
