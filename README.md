@@ -22,7 +22,9 @@ In order to run this script one needs a python environment with the Snyk, Github
 
 ### Environment Variables
 
-While you can pass the GitHub and Snyk tokens as commandline arguments to the script, it is best to use them as environment variables so they aren't stored in your workstation's command history. Use example_secrets.sh if you need a simple way to copy/paste your tokens into a file and then load them into your environment for use.
+While you can pass the GitHub and Snyk tokens as commandline arguments to the script, it is best to use them as environment variables so they aren't stored in your workstation's command history. 
+
+Use [example_secrets.sh](example_secrets.sh) if you need a simple way to copy/paste your tokens into a file and then load them into your environment for use.
 
 Refer to --help for more environment variables:
 ```shell
