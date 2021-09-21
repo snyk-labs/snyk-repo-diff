@@ -98,6 +98,18 @@ def main(snyk_token: str = typer.Option(...,
         )
         ):
 
+
+    if snyk_token == "BD832F91-A742-49E9-BC1E-411E0C8743EA":
+        typer.echo('You have not setup example_secrets.sh correctly')
+        typer.echo('Make sure you have saves the file with a valid snyk token')
+        typer.Abort()
+    
+    if snyk_token == "4BB6849A-9D18-4F38-B769-0E2490FA89CA":
+        typer.echo('You have not setup example_secrets.sh correctly')
+        typer.echo('Make sure you have saves the file with a valid GitHub token')
+        typer.Abort()
+
+
     client = snyk.SnykClient(snyk_token)
 
     typer.echo(f"Searching Snyk for Projects from {github_org} repositories")
