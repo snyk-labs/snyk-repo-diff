@@ -113,6 +113,21 @@ Options:
 4) After loading the file into excel or similar it renders like this:
     ![Numbers.app render of CSV](https://github.com/snyk-tech-services/snyk-repo-diff/blob/main/img/table.png?raw=true)
 
+## Advanced usage
+
+repo_diff.py can take multiple origins (`--origin github --origin github-enterprise` is default), since Snyk can also monitor projects in the the CLI (common for gradle and poetry projects), to check that a repo is being monitored *somewhere* in your Snyk group, you can add the cli origin. This is not guaranteed to find all possible projects (the attribute, remoteRepoUrl, can be set manually by the user), but will in the situations that a attribute hasn't been overriden.
+
+```shell
+❯ python repo_diff.py --out-file output/test.json --format json --with-projects \
+--origin cli \
+--origin github \
+--origin github-enterprise
+Searching Snyk for Projects from snyk-playground repositories
+Searching 7 Snyk Org(s) with ('cli', 'github', 'github-enterprise') Projects  [####################################]  100%          
+Checking for Projects from the 27 repos in snyk-playground  [####################################]  100%
+Formatting and writing results to output/test.json
+```
+
 ## Support
 
 This script and its contents are provided as a best effort example of how to use Snyk and Github's python sdk's to generate data from both services APIs.

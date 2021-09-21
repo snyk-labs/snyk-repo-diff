@@ -38,7 +38,7 @@ def find_projects(repo, projects):
                 'origin': p.origin
             }
 
-        if p.origin == 'cli':
+        if p.origin == 'cli' and p.remoteRepoUrl is not None:
             p_sum['remoteRepoUrl'] = p.remoteRepoUrl.replace("http://", "https://").replace('.git','')
         else:
             p_sum['remoteRepoUrl'] = ''
