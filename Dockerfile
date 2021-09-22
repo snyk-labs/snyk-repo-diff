@@ -26,6 +26,8 @@ COPY *.py .
 # now we use multistage containers to then copy the requirements from the other container
 COPY --from=requirements /src/requirements.txt .
 
+# test the changes
+
 # now we're *just* deploying the needed packages for whatever was in the poetry setup
 RUN python -m pip install -U pip
 RUN pip install -r requirements.txt
