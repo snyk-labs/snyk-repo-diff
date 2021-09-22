@@ -41,14 +41,14 @@ jobs:
           severity-threshold: critical
           token-variable: SNYK_TOKEN
           additional-arguments: --policy-path=.snyk
-      - steps:
-          when:
-            condition:
-            - equal: [main, << pipeline.git.branch >>]
-              steps:
-              - run:
-                name: Perform Snyk Monitor
-                command: snyk monitor
+      - run:
+          name: Snyk Monitor if branch is main
+          command: |
+          if [ "${CIRCLE_BRANCH}" == "main" ]; then
+            snyk monitor
+          else
+            echo "not monitoring branch ${CIRCLE_BRANCH}"
+          fi
       
 
 
@@ -71,11 +71,11 @@ jobs:
           target-file: Dockerfile
           token-variable: SNYK_TOKEN
           additional-arguments: --policy-path=.snyk
-      - steps:
-          when:
-            condition:
-            - equal: [main, << pipeline.git.branch >>]
-              steps:
-              - run:
-                name: Perform Snyk Monitor
-                command: snyk monitor --docker "$IMAGE_NAME:latest" --file=Dockerfile
+      - run:
+          name: Snyk Monitor if branch is main
+          command: |
+          if [ "${CIRCLE_BRANCH}" == "main" ]; then
+            snyk monitor --docker "$IMAGE_NAME:latest" --file=Dockerfile
+          else
+            echo "not monitoring branch ${CIRCLE_BRANCH}"
+          fi
