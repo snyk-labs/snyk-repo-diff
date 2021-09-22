@@ -25,7 +25,8 @@ workflows:
       - build-test-monitor:
           filters:
             branches:
-              - main
+              only:
+                - main
       - docker-build-test-monitor:
           requires:
             - build-test-monitor
@@ -61,7 +62,6 @@ jobs:
           severity-threshold: critical
           target-file: Dockerfile
           token-variable: SNYK_TOKEN
-
 
   # these are out monitor jobs, we only want to monitor main branch
   build-test-monitor:
