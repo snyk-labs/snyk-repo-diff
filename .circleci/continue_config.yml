@@ -18,7 +18,7 @@ parameters:
     default: false
   snyk-monitor:
     type: boolean
-    default: equal: [ main, << pipeline.git.branch >> ]
+    default: equal: [ "main", << pipeline.git.branch >> ]
 
 workflows:
   poetry-file-test:
