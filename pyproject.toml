@@ -12,6 +12,7 @@ PyGithub = "^1.55"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.910"
+black = {version = "^21.9b0", allow-prereleases = true}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
