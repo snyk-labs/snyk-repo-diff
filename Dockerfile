@@ -5,7 +5,7 @@ FROM python:3.9-slim AS requirements
 ENV PYTHONDONTWRITEBYTECODE 1
 
 # step one is to create a container with poetry on it
-RUN python -m pip install -U pip poetry
+RUN python -m pip install --quiet -U pip poetry
 
 WORKDIR /src
 
@@ -13,7 +13,7 @@ COPY pyproject.toml pyproject.toml
 COPY poetry.lock poetry.lock
 
 # now that we have poetry, we export the requirements file
-RUN poetry export -f requirements.txt --without-hashes -o /src/requirements.txt
+RUN poetry export --quiet --no-interaction -f requirements.txt --without-hashes -o /src/requirements.txt
 
 # now we create our final container, runtime
 FROM python:3.9-slim AS runtime
@@ -29,8 +29,8 @@ COPY --from=requirements /src/requirements.txt .
 # test the changes
 
 # now we're *just* deploying the needed packages for whatever was in the poetry setup
-RUN python -m pip install -U pip
-RUN pip install -r requirements.txt
+RUN python -m pip install --quiet -U pip
+RUN pip install --quiet -r requirements.txt
 RUN mkdir /app/output
 
 ENTRYPOINT ["/usr/local/bin/python","/app/repo_diff.py"]
