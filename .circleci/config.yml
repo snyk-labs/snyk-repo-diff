@@ -57,7 +57,7 @@ jobs:
           name: Build Docker image
       - snyk/scan:
           docker-image-name: "$IMAGE_NAME:latest"
-          fail-on-issues: true
+          fail-on-issues: false
           monitor-on-build: false
           severity-threshold: critical
           target-file: Dockerfile
@@ -91,7 +91,7 @@ jobs:
           name: Build Docker image
       - snyk/scan:
           docker-image-name: "$IMAGE_NAME:latest"
-          fail-on-issues: true
+          fail-on-issues: false
           monitor-on-build: true
           project: "${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BRANCH}-container"
           severity-threshold: critical
