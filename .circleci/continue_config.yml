@@ -18,37 +18,17 @@ parameters:
     default: false
 
 workflows:
-  snyk-pr-test:
-    when: 
-      or: [<< pipeline.parameters.run-snyk-test >>,<< pipeline.parameters.run-docker-test >>]
+  poetry-file-test:
+    when: << pipeline.parameters.run-snyk-test >>
     jobs:
-      - build-test:
-          when: << pipeline.parameters.run-snyk-test >>
-          filters:
-            branches:
-              ignore:
-                - main
-      - docker-build-test:
-          when: << pipeline.parameters.run-docker-test >>
-          requires:
-            - build-test
-  merge-test-monitor:
-    when: 
-      or: [<< pipeline.parameters.run-snyk-test >>,<< pipeline.parameters.run-docker-test >>]
+      - snyk-poetry-test
+  dockerfile-tests:
+    when: << pipeline.parameters.run-docker-test >>
     jobs:
-      - build-test-monitor:
-          when: << pipeline.parameters.run-snyk-test >>
-          filters:
-            branches:
-              only:
-                - main
-      - docker-build-test-monitor:
-          when: << pipeline.parameters.run-docker-test >>
-          requires:
-            - build-test-monitor
+      - snyk-docker-test
 
 jobs:
-  build-test:
+  snyk-poetry-test:
     docker:
       - image: cimg/python:3.9
     steps:
@@ -57,11 +37,13 @@ jobs:
           pkg-manager: poetry
       - snyk/scan:
           fail-on-issues: true
-          monitor-on-build: false
+          monitor-on-build: equal: [ main, << pipeline.git.branch >> ]
           severity-threshold: critical
           token-variable: SNYK_TOKEN
           additional-arguments: --policy-path=.snyk
-  docker-build-test:
+
+
+  snyk-docker-test:
     docker:
       - image: "circleci/buildpack-deps:stretch"
     environment:
@@ -75,44 +57,7 @@ jobs:
       - snyk/scan:
           docker-image-name: "$IMAGE_NAME:latest"
           fail-on-issues: true
-          monitor-on-build: false
-          severity-threshold: critical
-          target-file: Dockerfile
-          token-variable: SNYK_TOKEN
-          additional-arguments: --policy-path=.snyk
-
-  # these are out monitor jobs, we only want to monitor main branch
-  build-test-monitor:
-    docker:
-      - image: cimg/python:3.9
-    steps:
-      - checkout
-      - python/install-packages:
-          pkg-manager: poetry
-      - snyk/scan:
-          fail-on-issues: true
-          monitor-on-build: true
-          project: "${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BRANCH}-app"
-          severity-threshold: critical
-          token-variable: SNYK_TOKEN
-          additional-arguments: --policy-path=.snyk
-
-  docker-build-test-monitor:
-    docker:
-      - image: "circleci/buildpack-deps:stretch"
-    environment:
-      IMAGE_NAME: snyk-tech-services/snyk-repo-diff
-    steps:
-      - checkout
-      - setup_remote_docker
-      - run:
-          command: "docker build -t $IMAGE_NAME:latest ."
-          name: Build Docker image
-      - snyk/scan:
-          docker-image-name: "$IMAGE_NAME:latest"
-          fail-on-issues: false
-          monitor-on-build: true
-          project: "${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BRANCH}-container"
+          monitor-on-build: equal: [ main, << pipeline.git.branch >> ]
           severity-threshold: critical
           target-file: Dockerfile
           token-variable: SNYK_TOKEN
