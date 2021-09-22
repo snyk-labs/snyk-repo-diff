@@ -44,7 +44,7 @@ jobs:
           monitor-on-build: false
           severity-threshold: critical
           token-variable: SNYK_TOKEN
-          additional-arguments: --policy-path=.snyk
+          additional-arguments: --policy-path=.snyk --remote-repo-url="${CIRCLE_REPOSITORY_URL}"
   docker-build-test:
     docker:
       - image: "circleci/buildpack-deps:stretch"
@@ -63,7 +63,7 @@ jobs:
           severity-threshold: critical
           target-file: Dockerfile
           token-variable: SNYK_TOKEN
-          additional-arguments: --policy-path=.snyk
+          additional-arguments: --policy-path=.snyk --remote-repo-url="${CIRCLE_REPOSITORY_URL}"
 
   # these are out monitor jobs, we only want to monitor main branch
   build-test-monitor:
@@ -79,7 +79,7 @@ jobs:
           project: "${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BRANCH}-app"
           severity-threshold: critical
           token-variable: SNYK_TOKEN
-          additional-arguments: --policy-path=.snyk
+          additional-arguments: --policy-path=.snyk --remote-repo-url="${CIRCLE_REPOSITORY_URL}"
 
   docker-build-test-monitor:
     docker:
@@ -100,4 +100,4 @@ jobs:
           severity-threshold: critical
           target-file: Dockerfile
           token-variable: SNYK_TOKEN
-          additional-arguments: --policy-path=.snyk
+          additional-arguments: --policy-path=.snyk --remote-repo-url="${CIRCLE_REPOSITORY_URL}"
