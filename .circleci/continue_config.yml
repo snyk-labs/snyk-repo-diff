@@ -31,13 +31,15 @@ jobs:
   snyk-poetry-test:
     docker:
       - image: cimg/python:3.9
+    environment:
+      SNYK_MONITOR: equal: [ main, << pipeline.git.branch >> ]
     steps:
       - checkout
       - python/install-packages:
           pkg-manager: poetry
       - snyk/scan:
           fail-on-issues: true
-          monitor-on-build: equal: [ main, << pipeline.git.branch >> ]
+          monitor-on-build: "$SNYK_MONITOR"
           severity-threshold: critical
           token-variable: SNYK_TOKEN
           additional-arguments: --policy-path=.snyk
@@ -48,6 +50,7 @@ jobs:
       - image: "circleci/buildpack-deps:stretch"
     environment:
       IMAGE_NAME: snyk-tech-services/snyk-repo-diff
+      SNYK_MONITOR: equal: [ main, << pipeline.git.branch >> ]
     steps:
       - checkout
       - setup_remote_docker
@@ -57,7 +60,7 @@ jobs:
       - snyk/scan:
           docker-image-name: "$IMAGE_NAME:latest"
           fail-on-issues: true
-          monitor-on-build: equal: [ main, << pipeline.git.branch >> ]
+          monitor-on-build: "$SNYK_MONITOR"
           severity-threshold: critical
           target-file: Dockerfile
           token-variable: SNYK_TOKEN
