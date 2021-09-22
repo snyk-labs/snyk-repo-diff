@@ -88,7 +88,7 @@ Options:
     - Delete the container image after use (`--rm`)
     - Specify the `--snyk-group`, `--github-org`, and `--out-file` options for the script
     ```shell
-    ❯ docker run --rm -v "${PWD}/output":/app/output -e SNYK_TOKEN -e GITHUB_TOKEN -it repo-diff \
+    ❯ docker run --rm -v "${PWD}/output":/app/output -e SNYK_TOKEN -e GITHUB_TOKEN -it repo_diff \
     --out-file output/repos-with-no-projects.csv \
     --snyk-group 36863d40-ba29-491f-af63-7a1a7d79e411 \
     --github-org snyk-playground
