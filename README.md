@@ -2,6 +2,9 @@
 
 [![CircleCI](https://circleci.com/gh/snyk-tech-services/snyk-repo-diff/tree/main.svg?style=shield)](https://circleci.com/gh/snyk-tech-services/snyk-repo-diff/tree/main)
 
+![Known Vulnerabilities](https://snyk.io/test/github/snyk-tech-services/snyk-repo-diff/badge.svg)
+
+
 
 Helping answer which repositories aren't monitored by Snyk?
 
