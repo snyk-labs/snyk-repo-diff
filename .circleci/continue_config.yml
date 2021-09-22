@@ -44,12 +44,12 @@ jobs:
       - run:
           name: Snyk Monitor if branch is main
           command: |
-          if [ "${CIRCLE_BRANCH}" == "main" ]; then
-            snyk monitor
-          else
-            echo "not monitoring branch ${CIRCLE_BRANCH}"
-          fi
-      
+            if [ "${CIRCLE_BRANCH}" == "main" ]; then
+              snyk monitor
+            else
+              echo "not monitoring branch ${CIRCLE_BRANCH}"
+            fi
+        
 
 
   snyk-docker-test:
@@ -74,8 +74,8 @@ jobs:
       - run:
           name: Snyk Monitor if branch is main
           command: |
-          if [ "${CIRCLE_BRANCH}" == "main" ]; then
-            snyk monitor --docker "$IMAGE_NAME:latest" --file=Dockerfile
-          else
-            echo "not monitoring branch ${CIRCLE_BRANCH}"
-          fi
+            if [ "${CIRCLE_BRANCH}" == "main" ]; then
+              snyk monitor --docker "$IMAGE_NAME:latest" --file=Dockerfile
+            else
+              echo "not monitoring branch ${CIRCLE_BRANCH}"
+            fi
