@@ -30,6 +30,6 @@ jobs:
           fail-on-issues: false
           monitor-on-build: false
           project: '${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BRANCH}-app'
-          severity-threshold: critcal
+          severity-threshold: critical
           token-variable: SNYK_TOKEN
 
