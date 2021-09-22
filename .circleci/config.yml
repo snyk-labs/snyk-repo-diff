@@ -1,103 +1,29 @@
 version: 2.1
 
+# this allows you to use CircleCI's dynamic configuration feature
+setup: true
+
+# the path-filtering orb is required to continue a pipeline based on
+# the path of an updated fileset
 orbs:
-  # The python orb contains a set of prepackaged CircleCI configuration you can use repeatedly in your configuration files
-  # Orb commands and jobs help you with common scripting around a language/tool
-  # so you dont have to copy and paste it everywhere.
-  # See the orb documentation here: https://circleci.com/developer/orbs/orb/circleci/python
-  python: circleci/python@1
-  snyk: snyk/snyk@1
-  slack: circleci/slack@4
+  path-filtering: circleci/path-filtering@0.0.2
 
 workflows:
-  pr-test:
+  always-run:
     jobs:
-      - build-test:
-          filters:
-            branches:
-              ignore:
-                - main
-      - docker-build-test:
-          requires:
-            - build-test
-  merge-test-monitor:
-    jobs:
-      - build-test-monitor:
-          filters:
-            branches:
-              only:
-                - main
-      - docker-build-test-monitor:
-          requires:
-            - build-test-monitor
-
-jobs:
-  build-test:
-    docker:
-      - image: cimg/python:3.9
-    steps:
-      - checkout
-      - python/install-packages:
-          pkg-manager: poetry
-      - snyk/scan:
-          fail-on-issues: true
-          monitor-on-build: false
-          severity-threshold: critical
-          token-variable: SNYK_TOKEN
-          additional-arguments: --policy-path=.snyk
-  docker-build-test:
-    docker:
-      - image: "circleci/buildpack-deps:stretch"
-    environment:
-      IMAGE_NAME: snyk-tech-services/snyk-repo-diff
-    steps:
-      - checkout
-      - setup_remote_docker
-      - run:
-          command: "docker build -t $IMAGE_NAME:latest ."
-          name: Build Docker image
-      - snyk/scan:
-          docker-image-name: "$IMAGE_NAME:latest"
-          fail-on-issues: true
-          monitor-on-build: false
-          severity-threshold: critical
-          target-file: Dockerfile
-          token-variable: SNYK_TOKEN
-          additional-arguments: --policy-path=.snyk
-
-  # these are out monitor jobs, we only want to monitor main branch
-  build-test-monitor:
-    docker:
-      - image: cimg/python:3.9
-    steps:
-      - checkout
-      - python/install-packages:
-          pkg-manager: poetry
-      - snyk/scan:
-          fail-on-issues: true
-          monitor-on-build: true
-          project: "${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BRANCH}-app"
-          severity-threshold: critical
-          token-variable: SNYK_TOKEN
-          additional-arguments: --policy-path=.snyk
-
-  docker-build-test-monitor:
-    docker:
-      - image: "circleci/buildpack-deps:stretch"
-    environment:
-      IMAGE_NAME: snyk-tech-services/snyk-repo-diff
-    steps:
-      - checkout
-      - setup_remote_docker
-      - run:
-          command: "docker build -t $IMAGE_NAME:latest ."
-          name: Build Docker image
-      - snyk/scan:
-          docker-image-name: "$IMAGE_NAME:latest"
-          fail-on-issues: false
-          monitor-on-build: true
-          project: "${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BRANCH}-container"
-          severity-threshold: critical
-          target-file: Dockerfile
-          token-variable: SNYK_TOKEN
-          additional-arguments: --policy-path=.snyk
+      # the path-filtering/filter job determines which pipeline
+      # parameters to update.
+      - path-filtering/filter:
+          name: check-updated-files
+          # 3-column, whitespace-delimited mapping. One mapping per
+          # line:
+          # <regex path-to-test> <parameter-to-set> <value-of-pipeline-parameter>
+          mapping: |
+            poetry.lock run-snyk-test true
+            Dockerfile run-docker-test true
+          base-revision: main
+          # this is the path of the configuration we should trigger once
+          # path filtering and pipeline parameter value updates are
+          # complete. In this case, we are using the parent dynamic
+          # configuration itself.
+          config-path: .circleci/continue_config.yml
