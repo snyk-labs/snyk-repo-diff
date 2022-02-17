@@ -1,9 +1,11 @@
 import snyk
 from snyk.client import SnykClient
+from snykv3 import SnykV3Client
 import typer
 import json
 import requests
 from github import Github, Repository
+import gitlab
 
 from typing import List, Optional
 from enum import Enum
@@ -14,6 +16,12 @@ app = typer.Typer(add_completion=False)
 class FileFormat(str, Enum):
     csv = "csv"
     json = "json"
+
+
+class Origin(str, Enum):
+    github = "github"
+    github_enterprise = "github-enterprise"
+    gitlab = "gitlab"
 
 
 def retrieve_projects(client: SnykClient, snyk_org_ids: list, origins: list):
@@ -32,6 +40,59 @@ def retrieve_projects(client: SnykClient, snyk_org_ids: list, origins: list):
             projects = projects + p_mon
 
     return projects
+
+
+def get_repos(origin: Origin, scm_token: str, scm_org: str = None):
+
+    if origin.value == "github":
+        try:
+            gh = Github(scm_token)
+            repos = gh.search_repositories(f"org:{scm_org} fork:true")
+        except Exception as e:
+            typer.echo(f"GitHub API Error: {e}")
+            raise typer.Abort()
+    elif origin.value == "gitlab":
+        try:
+            gl = gitlab.Gitlab(private_token=scm_token)
+            g_id = gl.groups.list(search=scm_org)[0].id
+            group = gl.groups.get(g_id)
+            repos = group.projects.list(include_subgroups=True)
+            print(len(gl.projects.list()))
+            for r in repos:
+                print(r.attributes)
+        except Exception as e:
+            typer.echo(f"GitHub API Error: {e}")
+            raise typer.Abort()
+    else:
+        typer.echo("Invalid SCM name provided")
+        raise typer.Abort()
+
+    return repos
+
+
+def get_targets(
+    self,
+    client: SnykV3Client,
+    origin: str = None,
+    exclude_empty: bool = True,
+    limit: int = 100,
+):
+    """
+    Retrieves all the targets from this org object, using the provided client
+    Optionally matches on 'origin'
+    """
+
+    params = {"origin": origin, "limit": limit, "excludeEmpty": exclude_empty}
+
+    path = f"orgs/{self.id}/targets"
+
+    targets = client.get_all_pages(path, params)
+
+    for target in targets:
+        new_target = Target.parse_obj(target)
+        new_target.org_id = self.id
+        new_target.org_slug = self.slug
+        self.add_target(new_target)
 
 
 def find_projects(repo, projects):
@@ -84,13 +145,13 @@ def main(
         help="Only projects associated with the Snyk Group are checked for",
         envvar="SNYK_GROUP",
     ),
-    github_token: str = typer.Option(
+    scm_token: str = typer.Option(
         ...,
-        prompt="GitHub Token",
-        help="GitHub Token with read access to the GitHub Org you wish to audit",
+        prompt="SCM Access Token",
+        help="Access Token to the SCM platform you wish to audit (GitHub and GitLab currently supported)",
         envvar="GITHUB_TOKEN",
     ),
-    github_org: str = typer.Option(
+    scm_org: str = typer.Option(
         ...,
         prompt="GitHub Org Name",
         help="Name of the GitHub Org whose repositories you want to check",
@@ -106,10 +167,7 @@ def main(
         envvar="REPO_DIFF_OUTPUT",
     ),
     format: FileFormat = typer.Option(FileFormat.csv, case_sensitive=False),
-    origin: Optional[List[str]] = typer.Option(
-        ["github", "github-enterprise"],
-        help="Specify which Snyk integrations to check for projects",
-    ),
+    origin: Origin = typer.Option(Origin.github, case_sensitive=False),
 ):
 
     if snyk_token == "BD832F91-A742-49E9-BC1E-411E0C8743EA":
@@ -124,7 +182,7 @@ def main(
 
     client = snyk.SnykClient(snyk_token)
 
-    typer.echo(f"Searching Snyk for Projects from {github_org} repositories")
+    typer.echo(f"Searching Snyk for Projects from {scm_org} repositories")
 
     try:
         snyk_orgs = client.organizations.all()
@@ -138,19 +196,22 @@ def main(
 
     projects = retrieve_projects(client, snyk_org_ids, origin)
 
-    try:
-        gh = Github(github_token)
-        gh_repos = gh.search_repositories(f"org:{github_org} fork:true")
-    except Exception as e:
-        typer.echo(f"GitHub API Error: {e}")
-        raise typer.Abort()
+    print(origin)
+
+    scm = origin.value
+
+    print(scm)
+
+    the_repos = get_repos(origin, scm_token, scm_org)
+
+    print(the_repos)
 
     repos = []
 
     with typer.progressbar(
-        gh_repos,
-        length=gh_repos.totalCount,
-        label=f"Checking for Projects from the {gh_repos.totalCount} repos in {github_org}",
+        the_repos,
+        length=the_repos.totalCount,
+        label=f"Checking for Projects from the {the_repos.totalCount} repos in {scm_org}",
     ) as typer_gh_repos:
         for r in typer_gh_repos:
             repo = {

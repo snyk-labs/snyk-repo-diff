@@ -3,3 +3,5 @@ output/*
 *.DS_Store*
 example_secrets.sh
 .vscode
+.dccache
+__*

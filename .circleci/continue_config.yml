@@ -23,7 +23,11 @@ workflows:
     jobs:
       - snyk-poetry-test
   dockerfile-tests:
-    when: << pipeline.parameters.run-docker-test >>
+    when: 
+        condition:
+          or:
+            - << pipeline.parameters.run-docker-test >>
+            - equal: [main, << pipeline.git.branch >>]
     jobs:
       - snyk-docker-test
 
@@ -35,6 +39,7 @@ jobs:
       - checkout
       - python/install-packages:
           pkg-manager: poetry
+          args: --no-dev
       - snyk/scan:
           fail-on-issues: true
           monitor-on-build: false
