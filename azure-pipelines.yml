@@ -17,6 +17,14 @@ steps:
     secretsFilter: '*'
 
 - script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
+    docker run --rm -v "$(Build.ArtifactStagingDirectory)/output":/app/output -e SNYK_TOKEN=$(SNYK_TOKEN) -e GITHUB_TOKEN=$(GITHUB_TOKEN} -it repo_diff \
+               --out-file output/repos-with-no-projects.csv \
+               --snyk-group  "4d62001b-9ab4-446a-815c-bf51ea2b129b" \
+               --github-org prospa-group
   displayName: 'Run repo-diff'
+
+# publish artifact
+- task: PublishBuildArtifacts@1
+  displayName: Publish Output to Artifactory
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)/output/repos-with-no-projects.csv'
