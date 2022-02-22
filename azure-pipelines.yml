@@ -10,8 +10,7 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
-- displayName: 'Extract Secrets'
-  task: AzureKeyVault@2
+- task: AzureKeyVault@2
   inputs:
     connectedServiceName: "azure-security-live"
     keyVaultName: "live-kv-security-3p"
