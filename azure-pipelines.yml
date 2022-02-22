@@ -22,6 +22,8 @@ variables:
 
 steps:
 - script: |
+    echo "ArtifactStagingDirectory : $(Build.ArtifactStagingDirectory)"
+    
     docker run --rm -v "$(Build.ArtifactStagingDirectory)/output":/app/output -e SNYK_TOKEN=$(SNYK-TOKEN) -e GITHUB_TOKEN=$(GITHUB-TOKEN} -it repo_diff \
                --out-file output/repos-with-no-projects.csv \
                --snyk-group  "4d62001b-9ab4-446a-815c-bf51ea2b129b" \
