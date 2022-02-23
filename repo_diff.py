@@ -54,14 +54,20 @@ def get_repos(origin: Origin, scm_token: str, scm_org: str = None):
     elif origin.value == "gitlab":
         try:
             gl = gitlab.Gitlab(private_token=scm_token)
+
+            groups = gl.groups.list(search=scm_org)
+
+            for g in groups:
+                print(g)
+
             g_id = gl.groups.list(search=scm_org)[0].id
             group = gl.groups.get(g_id)
             repos = group.projects.list(include_subgroups=True)
-            print(len(gl.projects.list()))
+            print(len(repos))
             for r in repos:
                 print(r.attributes)
         except Exception as e:
-            typer.echo(f"GitHub API Error: {e}")
+            typer.echo(f"GitLab API Error: {e}")
             raise typer.Abort()
     else:
         typer.echo("Invalid SCM name provided")
@@ -88,11 +94,7 @@ def get_targets(
 
     targets = client.get_all_pages(path, params)
 
-    for target in targets:
-        new_target = Target.parse_obj(target)
-        new_target.org_id = self.id
-        new_target.org_slug = self.slug
-        self.add_target(new_target)
+    return targets
 
 
 def find_projects(repo, projects):
@@ -149,13 +151,13 @@ def main(
         ...,
         prompt="SCM Access Token",
         help="Access Token to the SCM platform you wish to audit (GitHub and GitLab currently supported)",
-        envvar="GITHUB_TOKEN",
+        envvar="SCM_TOKEN",
     ),
     scm_org: str = typer.Option(
         ...,
-        prompt="GitHub Org Name",
-        help="Name of the GitHub Org whose repositories you want to check",
-        envvar="GITHUB_ORG",
+        prompt="SCM Org/Group Name",
+        help="Name of the GitHub Org or GitLab Group whose repos you want to check against",
+        envvar="SCM_ORG",
     ),
     with_projects: bool = typer.Option(
         False, "--with-projects", help="Include repositories that have projects"
@@ -194,14 +196,18 @@ def main(
 
     snyk_org_ids = [o.id for o in snyk_orgs if o.group.id == snyk_group]
 
+    # This recursively gets project information for every org
     projects = retrieve_projects(client, snyk_org_ids, origin)
 
+    # just to sanity check - remove in final build
     print(origin)
 
     scm = origin.value
 
+    # sanity check
     print(scm)
 
+    # this connects to a single github or gitlab group/org and gets all the repositories
     the_repos = get_repos(origin, scm_token, scm_org)
 
     print(the_repos)
