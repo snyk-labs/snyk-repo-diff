@@ -1,0 +1,38 @@
+# step 1
+# regular trigger/pr setup
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+
+pr:
+  autoCancel: true
+  branches:
+    include:
+      - main
+
+# step2
+# define resource for platform-core-pipelines repository with alias 'core-pipelines'
+resources:
+  repositories:
+    - repository: core-pipelines
+      endpoint: prospa-group
+      name: prospa-group/platform-core-pipelines
+      type: github
+      ref: refs/heads/master
+
+
+# step 3
+# build
+extends:
+  template: pipelines/docker.image-build.v1/pipeline.yaml@core-pipelines
+  parameters:
+    p3domain: "security"
+
+    buildDockerfile: "Dockerfile"
+    buildImageName: "repo_diff"
+
+    demoContainerRegistry: "sec-docker-demo"
+    stagingContainerRegistry: "sec-docker-staging"
+    liveContainerRegistry: "sec-docker-live"
