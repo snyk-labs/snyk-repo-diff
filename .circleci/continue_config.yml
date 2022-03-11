@@ -46,6 +46,7 @@ jobs:
           severity-threshold: critical
           token-variable: SNYK_TOKEN
           additional-arguments: --policy-path=.snyk --file=poetry.lock
+
       - when:
           condition:
             equal: [main, << pipeline.git.branch >>]
@@ -53,6 +54,7 @@ jobs:
             - run:
                 name: Snyk Monitor
                 command: snyk monitor --policy-path=.snyk --file=poetry.lock
+
 
   snyk-docker-test:
     docker:
