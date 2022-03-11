@@ -2,10 +2,9 @@ import snyk
 from snyk.client import SnykClient
 import typer
 import json
-import requests
-from github import Github, Repository
+from github import Github
+import gitlab
 
-from typing import List, Optional
 from enum import Enum
 
 app = typer.Typer(add_completion=False)
@@ -14,6 +13,12 @@ app = typer.Typer(add_completion=False)
 class FileFormat(str, Enum):
     csv = "csv"
     json = "json"
+
+
+class Origin(str, Enum):
+    github = "github"
+    github_enterprise = "github-enterprise"
+    gitlab = "gitlab"
 
 
 def retrieve_projects(client: SnykClient, snyk_org_ids: list, origins: list):
@@ -34,6 +39,103 @@ def retrieve_projects(client: SnykClient, snyk_org_ids: list, origins: list):
     return projects
 
 
+def get_repos(origin: Origin, scm_token: str, scm_org: str = None, scm_url: str = None):
+
+    if origin.value == "github" or origin.value == "github-enterprise":
+        try:
+            if scm_url:
+                gh = Github(login_or_token=scm_token, base_url=scm_url)
+            else:
+                gh = Github(login_or_token=scm_token)
+
+            repos = normalize_github(gh.search_repositories(f"org:{scm_org} fork:true"))
+        except Exception as e:
+            typer.echo(f"GitHub API Error: {e}")
+            raise typer.Abort()
+    elif origin.value == "gitlab":
+        try:
+            if scm_url:
+                gl = gitlab.Gitlab(
+                    url=scm_url,
+                    private_token=scm_token,
+                )
+            else:
+                gl = gitlab.Gitlab(private_token=scm_token)
+
+            g_id = gl.groups.list(search=scm_org)[0].id
+            group = gl.groups.get(g_id)
+            repos = normalize_gitlab(group.projects.list(include_subgroups=True))
+
+        except Exception as e:
+            typer.echo(f"GitLab API Error: {e}")
+            raise typer.Abort()
+    else:
+        typer.echo("Invalid SCM name provided")
+        raise typer.Abort()
+
+    return repos
+
+
+def normalize_gitlab(repos) -> list:
+
+    new_repos = []
+
+    for r in repos:
+        repo = {
+            "full_name": r.path_with_namespace,
+            "urls": [r.ssh_url_to_repo, r.http_url_to_repo],
+            "updated": str(r.last_activity_at),
+            "projects": [],
+        }
+        new_repos.append(repo)
+
+    return new_repos
+
+
+def normalize_github(repos) -> list:
+
+    new_repos = []
+
+    for r in repos:
+        repo = {
+            "full_name": r.full_name,
+            "urls": [r.ssh_url, r.html_url, r.git_url],
+            "updated": str(r.pushed_at),
+            "fork": r.fork,
+            "projects": [],
+        }
+        new_repos.append(repo)
+
+    return new_repos
+
+
+def has_forks(fork_count: int = 0) -> bool:
+    return bool(fork_count != 0)
+
+
+def get_targets(
+    self,
+    client: SnykClient,
+    origin: str = None,
+    exclude_empty: bool = True,
+    limit: int = 100,
+):
+    """
+    Retrieves all the targets from this org object, using the provided client
+    Optionally matches on 'origin'
+    """
+
+    params = {"origin": origin, "limit": limit, "excludeEmpty": exclude_empty}
+
+    path = f"orgs/{self.id}/targets"
+
+    targets = client.get_v3_pages(path, params)
+
+    print(targets)
+
+    return targets
+
+
 def find_projects(repo, projects):
 
     for p in projects:
@@ -45,29 +147,41 @@ def find_projects(repo, projects):
             "origin": p.origin,
         }
 
-        if p.origin == "cli" and p.remoteRepoUrl is not None:
-            p_sum["remoteRepoUrl"] = p.remoteRepoUrl.replace(
-                "http://", "https://"
-            ).replace(".git", "")
+        if p.origin == "cli" and p.remoteUrl is not None:
+            p_sum["remoteUrl"] = p.remoteUrl.replace("http://", "https://").replace(
+                ".git", ""
+            )
         else:
-            p_sum["remoteRepoUrl"] = ""
+            p_sum["remoteUrl"] = ""
 
         if str(p_sum["name"]).startswith(repo["full_name"]):
             repo["projects"].append(p_sum)
-        elif p_sum["remoteRepoUrl"] in repo["urls"]:
+        elif p_sum["remoteUrl"] in repo["urls"]:
             repo["projects"].append(p_sum)
 
     return repo
 
 
-def make_csv(repo):
-    csv = ["Repository Name,Last Updated,Is Fork,Snyk Project Count"]
+def make_csv(repo, origins):
 
-    for r in repo:
-        csv_line = f'{r["full_name"]},{r["updated"]},{r["fork"]},{len(r["projects"])}'
-        csv.append(csv_line)
+    if origins in ("github", "github-enterprise"):
+        csv = ["Repository Name,Last Updated,Is Fork,Snyk Project Count"]
 
-    return "\n".join(csv)
+        for r in repo:
+            csv_line = (
+                f'{r["full_name"]},{r["updated"]},{r["fork"]},{len(r["projects"])}'
+            )
+            csv.append(csv_line)
+
+        return "\n".join(csv)
+    else:
+        csv = ["Repository Name,Last Updated,Snyk Project Count"]
+
+        for r in repo:
+            csv_line = f'{r["full_name"]},{r["updated"]},{len(r["projects"])}'
+            csv.append(csv_line)
+
+        return "\n".join(csv)
 
 
 @app.callback(invoke_without_command=True)
@@ -84,17 +198,22 @@ def main(
         help="Only projects associated with the Snyk Group are checked for",
         envvar="SNYK_GROUP",
     ),
-    github_token: str = typer.Option(
+    scm_token: str = typer.Option(
         ...,
-        prompt="GitHub Token",
-        help="GitHub Token with read access to the GitHub Org you wish to audit",
-        envvar="GITHUB_TOKEN",
+        prompt="SCM Access Token",
+        help="Access Token to the SCM platform you wish to audit (GitHub and GitLab currently supported)",
+        envvar="SCM_TOKEN",
     ),
-    github_org: str = typer.Option(
+    scm_org: str = typer.Option(
         ...,
-        prompt="GitHub Org Name",
-        help="Name of the GitHub Org whose repositories you want to check",
-        envvar="GITHUB_ORG",
+        prompt="SCM Org/Group Name",
+        help="Name of the GitHub Org or GitLab Group whose repos you want to check against",
+        envvar="SCM_ORG",
+    ),
+    scm_url: str = typer.Option(
+        None,
+        help="Provide url as https://gitlab.example.com etc",
+        envvar="SCM_URL",
     ),
     with_projects: bool = typer.Option(
         False, "--with-projects", help="Include repositories that have projects"
@@ -106,10 +225,7 @@ def main(
         envvar="REPO_DIFF_OUTPUT",
     ),
     format: FileFormat = typer.Option(FileFormat.csv, case_sensitive=False),
-    origin: Optional[List[str]] = typer.Option(
-        ["github", "github-enterprise"],
-        help="Specify which Snyk integrations to check for projects",
-    ),
+    origin: Origin = typer.Option(Origin.github, case_sensitive=False),
 ):
 
     if snyk_token == "BD832F91-A742-49E9-BC1E-411E0C8743EA":
@@ -124,7 +240,9 @@ def main(
 
     client = snyk.SnykClient(snyk_token)
 
-    typer.echo(f"Searching Snyk for Projects from {github_org} repositories")
+    print(scm_url)
+
+    typer.echo(f"Searching Snyk for Projects from {scm_org} repositories")
 
     try:
         snyk_orgs = client.organizations.all()
@@ -136,32 +254,22 @@ def main(
 
     snyk_org_ids = [o.id for o in snyk_orgs if o.group.id == snyk_group]
 
+    # This recursively gets project information for every org
     projects = retrieve_projects(client, snyk_org_ids, origin)
 
-    try:
-        gh = Github(github_token)
-        gh_repos = gh.search_repositories(f"org:{github_org} fork:true")
-    except Exception as e:
-        typer.echo(f"GitHub API Error: {e}")
-        raise typer.Abort()
+    # this connects to a single github or gitlab group/org and gets all the repositories
+    the_repos = get_repos(origin, scm_token, scm_org, scm_url)
 
     repos = []
 
     with typer.progressbar(
-        gh_repos,
-        length=gh_repos.totalCount,
-        label=f"Checking for Projects from the {gh_repos.totalCount} repos in {github_org}",
-    ) as typer_gh_repos:
-        for r in typer_gh_repos:
-            repo = {
-                "full_name": r.full_name,
-                "urls": [r.ssh_url, r.html_url, r.git_url],
-                "updated": str(r.pushed_at),
-                "fork": r.fork,
-                "projects": [],
-            }
+        the_repos,
+        length=len(the_repos),
+        label=f"Checking for Projects from the {len(the_repos)} repos in {scm_org}",
+    ) as typer_the_repos:
+        for repo in typer_the_repos:
             repos.append(find_projects(repo, projects))
-            typer_gh_repos.update(1)
+            typer_the_repos.update(1)
 
     if not with_projects:
         repos = [r for r in repos if len(r["projects"]) == 0]
@@ -170,7 +278,7 @@ def main(
 
     try:
         if format.value == "csv":
-            output = make_csv(repos)
+            output = make_csv(repos, {origin})
         else:
             output = json.dumps(repos, indent=4)
 
