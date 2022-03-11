@@ -94,6 +94,8 @@ def get_targets(
 
     targets = client.get_all_pages(path, params)
 
+    print(targets)
+
     return targets
 
 
@@ -108,29 +110,39 @@ def find_projects(repo, projects):
             "origin": p.origin,
         }
 
-        if p.origin == "cli" and p.remoteRepoUrl is not None:
-            p_sum["remoteRepoUrl"] = p.remoteRepoUrl.replace(
+        if p.origin == "cli" and p.remoteUrl is not None:
+            p_sum["remoteUrl"] = p.remoteUrl.replace(
                 "http://", "https://"
             ).replace(".git", "")
         else:
-            p_sum["remoteRepoUrl"] = ""
+            p_sum["remoteUrl"] = ""
 
         if str(p_sum["name"]).startswith(repo["full_name"]):
             repo["projects"].append(p_sum)
-        elif p_sum["remoteRepoUrl"] in repo["urls"]:
+        elif p_sum["remoteUrl"] in repo["urls"]:
             repo["projects"].append(p_sum)
 
     return repo
 
 
-def make_csv(repo):
-    csv = ["Repository Name,Last Updated,Is Fork,Snyk Project Count"]
+def make_csv(repo, origins):
 
-    for r in repo:
-        csv_line = f'{r["full_name"]},{r["updated"]},{r["fork"]},{len(r["projects"])}'
-        csv.append(csv_line)
+    if origins in ("github","github-enterprise"):
+        csv = ["Repository Name,Last Updated,Is Fork,Snyk Project Count"]
 
-    return "\n".join(csv)
+        for r in repo:
+            csv_line = f'{r["full_name"]},{r["updated"]},{r["fork"]},{len(r["projects"])}'
+            csv.append(csv_line)
+
+        return "\n".join(csv)
+    else:
+        csv = ["Repository Name,Last Updated,Snyk Project Count"]
+
+        for r in repo:
+            csv_line = f'{r["full_name"]},{r["updated"]},{len(r["projects"])}'
+            csv.append(csv_line)
+
+        return "\n".join(csv)
 
 
 @app.callback(invoke_without_command=True)
@@ -216,19 +228,18 @@ def main(
 
     with typer.progressbar(
         the_repos,
-        length=the_repos.totalCount,
-        label=f"Checking for Projects from the {the_repos.totalCount} repos in {scm_org}",
-    ) as typer_gh_repos:
-        for r in typer_gh_repos:
+        length=len(the_repos),
+        label=f"Checking for Projects from the {len(the_repos)} repos in {scm_org}",
+    ) as typer_the_repos:
+        for r in typer_the_repos:
             repo = {
-                "full_name": r.full_name,
-                "urls": [r.ssh_url, r.html_url, r.git_url],
-                "updated": str(r.pushed_at),
-                "fork": r.fork,
+                "full_name": r.path_with_namespace,
+                "urls": [r.ssh_url_to_repo, r.http_url_to_repo],
+                "updated": str(r.last_activity_at),
                 "projects": [],
             }
             repos.append(find_projects(repo, projects))
-            typer_gh_repos.update(1)
+            typer_the_repos.update(1)
 
     if not with_projects:
         repos = [r for r in repos if len(r["projects"]) == 0]
@@ -237,7 +248,7 @@ def main(
 
     try:
         if format.value == "csv":
-            output = make_csv(repos)
+            output = make_csv(repos, {origin})
         else:
             output = json.dumps(repos, indent=4)
 
@@ -250,3 +261,4 @@ def main(
 
 if __name__ == "__main__":
     app()
+    

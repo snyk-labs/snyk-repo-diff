@@ -4,4 +4,7 @@ output/*
 example_secrets.sh
 .vscode
 .dccache
+bin
+lib
+__pycache__
 __*
