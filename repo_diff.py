@@ -39,18 +39,28 @@ def retrieve_projects(client: SnykClient, snyk_org_ids: list, origins: list):
     return projects
 
 
-def get_repos(origin: Origin, scm_token: str, scm_org: str = None):
+def get_repos(origin: Origin, scm_token: str, scm_org: str = None, scm_url: str = None):
 
     if origin.value == "github" or origin.value == "github-enterprise":
         try:
-            gh = Github(scm_token)
+            if scm_url:
+                gh = Github(login_or_token=scm_token, base_url=scm_url)
+            else:
+                gh = Github(login_or_token=scm_token)
+
             repos = normalize_github(gh.search_repositories(f"org:{scm_org} fork:true"))
         except Exception as e:
             typer.echo(f"GitHub API Error: {e}")
             raise typer.Abort()
     elif origin.value == "gitlab":
         try:
-            gl = gitlab.Gitlab(private_token=scm_token)
+            if scm_url:
+                gl = gitlab.Gitlab(
+                    url=scm_url,
+                    private_token=scm_token,
+                )
+            else:
+                gl = gitlab.Gitlab(private_token=scm_token)
 
             g_id = gl.groups.list(search=scm_org)[0].id
             group = gl.groups.get(g_id)
@@ -200,6 +210,11 @@ def main(
         help="Name of the GitHub Org or GitLab Group whose repos you want to check against",
         envvar="SCM_ORG",
     ),
+    scm_url: str = typer.Option(
+        None,
+        help="Provide url as https://gitlab.example.com etc",
+        envvar="SCM_URL",
+    ),
     with_projects: bool = typer.Option(
         False, "--with-projects", help="Include repositories that have projects"
     ),
@@ -225,6 +240,8 @@ def main(
 
     client = snyk.SnykClient(snyk_token)
 
+    print(scm_url)
+
     typer.echo(f"Searching Snyk for Projects from {scm_org} repositories")
 
     try:
@@ -241,7 +258,7 @@ def main(
     projects = retrieve_projects(client, snyk_org_ids, origin)
 
     # this connects to a single github or gitlab group/org and gets all the repositories
-    the_repos = get_repos(origin, scm_token, scm_org)
+    the_repos = get_repos(origin, scm_token, scm_org, scm_url)
 
     repos = []
 
