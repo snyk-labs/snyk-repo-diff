@@ -9,7 +9,6 @@ from enum import Enum
 
 app = typer.Typer(add_completion=False)
 
-
 class FileFormat(str, Enum):
     csv = "csv"
     json = "json"
@@ -41,12 +40,14 @@ def retrieve_projects(client: SnykClient, snyk_org_ids: list, origins: list):
 
 def get_repos(origin: Origin, scm_token: str, scm_org: str = None, scm_url: str = None):
 
+    GH_PAGE_LIMIT = 100
+
     if origin.value == "github" or origin.value == "github-enterprise":
         try:
             if scm_url:
-                gh = Github(login_or_token=scm_token, base_url=scm_url)
+                gh = Github(login_or_token=scm_token, base_url=scm_url, per_page=GH_PAGE_LIMIT)
             else:
-                gh = Github(login_or_token=scm_token)
+                gh = Github(login_or_token=scm_token, per_page=GH_PAGE_LIMIT)
 
             repos = normalize_github(gh.search_repositories(f"org:{scm_org} fork:true"))
         except Exception as e:
