@@ -63,7 +63,17 @@ def get_repos(origin: Origin, scm_token: str, scm_org: str = None, scm_url: str 
             else:
                 gl = gitlab.Gitlab(private_token=scm_token)
 
-            g_id = gl.groups.list(search=scm_org)[0].id
+            g_list = gl.groups.list(search=scm_org)
+            # we need the id with the shortest URL (which is not always the first entry in the list as the original code assumes),
+            # certain (Gitlab) environments have
+            #   https://scm_url/groups/scm_org/
+            #   https://scm_url/groups/scm_org/discussions ...
+            length_url = 1234567891234 # a really, really long URL
+            for group in g_list:
+                if len(group.web_url) < length_url:
+                    length_url = len(group.web_url)
+                    g_id = group.id
+
             group = gl.groups.get(g_id)
             repos = normalize_gitlab(group.projects.list(include_subgroups=True))
 
