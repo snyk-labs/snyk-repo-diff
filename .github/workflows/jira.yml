@@ -17,5 +17,5 @@ jobs:
         with:
           jiraHost: ${{ secrets.CSENG_JIRA_HOST }}
           jiraUsername: ${{ secrets.CSENG_JIRA_USERNAME }}
-          jiraPassword: ${{ secrets.CSENG_JIRA__PASSWORD }} 
+          jiraPassword: ${{ secrets.CSENG_JIRA_PASSWORD }} 
           project:  ${{ secrets.CSENG_JIRA_PROJECTKEY }} 
