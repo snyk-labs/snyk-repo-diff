@@ -15,7 +15,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          jiraHost: ${{ secrets.JIRA_HOST }}
-          jiraUsername: ${{ secrets.JIRA_USERNAME }}
-          jiraPassword: ${{ secrets.JIRA_PASSWORD }} 
+          jiraHost: ${{ secrets.CSENG_JIRA_HOST }}
+          jiraUsername: ${{ secrets.CSENG_JIRA_USERNAME }}
+          jiraPassword: ${{ secrets.CSENG_JIRA__PASSWORD }} 
           project:  ${{ secrets.CSENG_JIRA_PROJECTKEY }} 
