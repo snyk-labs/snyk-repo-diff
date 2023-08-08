@@ -1,7 +1,5 @@
 # repo_diff.py
 
-[![CircleCI](https://circleci.com/gh/snyk-tech-services/snyk-repo-diff/tree/main.svg?style=shield)](https://circleci.com/gh/snyk-tech-services/snyk-repo-diff/tree/main)
-
 Helping answer which repositories aren't monitored by Snyk?
 
 This works by retrieving a list of all projects in a given Snyk Group (so all projects in all orgs belonging to the same Snyk Group) and associating them with a list of repositories found in a given GitHub Organization (see below section on GitLab support). If one wants to check against multiple GitHub Organizations, currently run this script multiple times, providing a different GitHub Org each time.
