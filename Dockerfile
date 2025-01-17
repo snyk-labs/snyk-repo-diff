@@ -1,6 +1,6 @@
 # This is a multistage container builder for poetry projects
 
-FROM python:3.9-slim AS requirements
+FROM python:3.14.0a1-slim AS requirements
 
 ENV PYTHONDONTWRITEBYTECODE 1
 
@@ -16,7 +16,7 @@ COPY poetry.lock poetry.lock
 RUN poetry export --quiet --no-interaction -f requirements.txt --without-hashes -o /src/requirements.txt
 
 # now we create our final container, runtime
-FROM python:3.9-slim AS runtime
+FROM python:3.14.0a1-slim AS runtime
 
 WORKDIR /app
 
